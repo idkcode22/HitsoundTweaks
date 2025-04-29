@@ -1,9 +1,5 @@
-﻿using HarmonyLib;
-using SiraUtil.Affinity;
+﻿using SiraUtil.Affinity;
 using System;
-using System.Collections.Generic;
-using System.Reflection;
-using System.Reflection.Emit;
 using UnityEngine;
 
 namespace HitsoundTweaks.HarmonyPatches;
@@ -19,40 +15,12 @@ namespace HitsoundTweaks.HarmonyPatches;
  */
 internal class AudioTimeSyncController_dspTimeOffset_Patch : IAffinity
 {
-    [AffinityTranspiler]
-    [AffinityPatch(typeof(AudioTimeSyncController), nameof(AudioTimeSyncController.Update))]
-    private IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
-    {
-        var code = new List<CodeInstruction>(instructions);
-
-        // remove _dspTimeOffset update
-        var skip = true;
-        for (int i = 0; i < code.Count - 8; i++)
-        {
-            if (code[i + 8].opcode == OpCodes.Stfld && (FieldInfo)code[i + 8].operand == AccessTools.Field(typeof(AudioTimeSyncController), "_dspTimeOffset"))
-            {
-                // we want the second time this instruction occurs
-                if (skip)
-                {
-                    skip = false;
-                    continue;
-                }
-
-                // don't want to deal with fixing branches, so just replace it with NOPs
-                for (int j = 0; j < 9; j++)
-                {
-                    code[i + j].opcode = OpCodes.Nop;
-                }
-                break;
-            }
-        }
-        return code;
-    }
-
     // reimplement _dspTimeOffset correction
     private bool firstCorrectionDone = false;
     private int averageCount = 1;
     private double averageOffset = 0.0;
+
+    private double dspTimeOffset = 0;
 
     [AffinityPatch(typeof(AudioTimeSyncController), nameof(AudioTimeSyncController.Update))]
     private void Postfix(ref double ____dspTimeOffset, AudioSource ____audioSource, float ____timeScale, AudioTimeSyncController.State ____state)
@@ -66,6 +34,12 @@ internal class AudioTimeSyncController_dspTimeOffset_Patch : IAffinity
         if (____state == AudioTimeSyncController.State.Stopped)
         {
             firstCorrectionDone = false; // easiest way to reset this flag, Update is reliably called at least a few frames before playback starts
+            dspTimeOffset = 0;
+            return;
+        }
+
+        // Keep the original `dspTimeOffset` during recording
+        if (Time.captureFramerate != 0) {
             return;
         }
 
@@ -77,7 +51,7 @@ internal class AudioTimeSyncController_dspTimeOffset_Patch : IAffinity
             averageOffset = targetOffset;
             averageCount = 1;
             firstCorrectionDone = true;
-            ____dspTimeOffset = targetOffset;
+            dspTimeOffset = targetOffset;
         }
         else
         {
@@ -89,11 +63,13 @@ internal class AudioTimeSyncController_dspTimeOffset_Patch : IAffinity
                 averageCount++;
 
                 // set dspTimeOffset to whatever targetOffset encountered that is closest to the average
-                if (Math.Abs(targetOffset - (averageOffset + syncOffset)) < Math.Abs(____dspTimeOffset - (averageOffset + syncOffset)))
+                if (Math.Abs(targetOffset - (averageOffset + syncOffset)) < Math.Abs(dspTimeOffset - (averageOffset + syncOffset)))
                 {
-                    ____dspTimeOffset = targetOffset;
+                    dspTimeOffset = targetOffset;
                 }
             }
         }
+
+        ____dspTimeOffset = dspTimeOffset;
     }
 }
