@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Reflection;
 using UnityEngine;
@@ -9,7 +9,7 @@ namespace HitsoundTweaks.HarmonyPatches
     public class SpatializerDetectionHelper : IInitializable
     {
         public static bool spatializerPresent;
-        // Try Unity API first, fallback to searching game folders for known spatializer DLLs
+        // See if a spatializer plugin is present through AudioSettings GetSpatializerPluginName method
         public void Initialize()
         {
             DetectSpatializerPlugin();
@@ -19,12 +19,12 @@ namespace HitsoundTweaks.HarmonyPatches
             string name = GetSpatializerPluginNameSafe();
             if (!string.IsNullOrEmpty(name))
             {
-                Plugin.Log.Info($"[HitsoundTweaks] Spatializer reported by Unity: {name}");
+                Plugin.Log.Info($"Spatializer reported by Unity: {name}");
                 spatializerPresent = true;
                 return name;
             }
             spatializerPresent = false;
-            Plugin.Log.Warn("[HitsoundTweaks] No spatializer plugin detected! Downgrade below or at 1.40.2 for a spatializer.");
+            Plugin.Log.Warn("No spatializer plugin detected! Downgrade below or at 1.40.2 for a spatializer.");
             return null;
         }
 
