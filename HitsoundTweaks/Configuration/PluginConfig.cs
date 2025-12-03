@@ -10,9 +10,6 @@ internal class PluginConfig
     [UIValue("ignore-saber-speed")]
     public virtual bool IgnoreSaberSpeed { get; set; } = false;
 
-    [UIValue("PlayHitsoundOnlyOnCut")]
-    public virtual bool PlayHitsoundOnlyOnCut { get; set; } = false;
-
     [UIValue("PauseHitSoundWhenMissed")]
     public virtual bool PauseHitSoundWhenMissed { get; set; } = false;
 
