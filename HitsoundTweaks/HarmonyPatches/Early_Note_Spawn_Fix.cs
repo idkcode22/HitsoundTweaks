@@ -1,5 +1,6 @@
-﻿using SiraUtil.Affinity;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using HarmonyLib;
+using SiraUtil.Affinity;
 
 namespace HitsoundTweaks.HarmonyPatches;
 
@@ -13,10 +14,10 @@ internal class Early_Note_Spawn_Fix : IAffinity
     private readonly List<NoteController> initQueue = new();
 
     [AffinityPrefix]
-    [AffinityPatch(typeof(NoteCutSoundEffectManager), nameof(NoteCutSoundEffectManager.HandleNoteWasSpawned))]
-    private bool NoteSpawnPrefix(NoteController noteController, AudioTimeSyncController ____audioTimeSyncController)
+    [AffinityPatch(typeof(NoteCutSoundEffectManager), "HandleNoteWasSpawned")]
+    private bool NoteSpawnPrefix(NoteController noteController, IAudioTimeSource ____audioTimeSyncController)
     {
-        if (____audioTimeSyncController.state != AudioTimeSyncController.State.Playing)
+        if (____audioTimeSyncController.state != IAudioTimeSource.State.Playing)
         {
             initQueue.Add(noteController);
             return false;
@@ -25,14 +26,14 @@ internal class Early_Note_Spawn_Fix : IAffinity
     }
 
     [AffinityPrefix]
-    [AffinityPatch(typeof(NoteCutSoundEffectManager), nameof(NoteCutSoundEffectManager.LateUpdate))]
-    private void LateUpdatePrefix(AudioTimeSyncController ____audioTimeSyncController, NoteCutSoundEffectManager __instance)
+    [AffinityPatch(typeof(NoteCutSoundEffectManager), "LateUpdate")]
+    private void LateUpdatePrefix(IAudioTimeSource ____audioTimeSyncController, NoteCutSoundEffectManager __instance)
     {
-        if (____audioTimeSyncController.state == AudioTimeSyncController.State.Playing && initQueue.Count > 0)
+        if (____audioTimeSyncController.state == IAudioTimeSource.State.Playing && initQueue.Count > 0)
         {
             foreach (var item in initQueue)
             {
-                __instance.HandleNoteWasSpawned(item);
+                AccessTools.Method(typeof(NoteCutSoundEffectManager), "HandleNoteWasSpawned")?.Invoke(__instance, new object[] { item });
             }
             initQueue.Clear();
         }

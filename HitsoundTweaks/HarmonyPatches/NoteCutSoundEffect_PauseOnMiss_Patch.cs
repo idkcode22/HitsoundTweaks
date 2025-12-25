@@ -19,7 +19,7 @@ internal class NoteCutSoundEffect_PauseOnMiss_Patch : IAffinity
     }
 
     public static bool isNoteShort;
-    [AffinityPatch(typeof(NoteCutSoundEffectManager), nameof(NoteCutSoundEffectManager.HandleNoteWasSpawned))]
+    [AffinityPatch(typeof(NoteCutSoundEffectManager), "HandleNoteWasSpawned")]
     private void Postfix(NoteController noteController, float ____beatAlignOffset)
     {
         // Determine if the note is short for use in muting logic, this is needed to prevent spatialization artifacts on short notes.
